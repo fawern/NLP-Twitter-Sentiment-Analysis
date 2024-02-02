@@ -1,28 +1,12 @@
-import numpy as np
-import pandas as pd
-
-import rnnlibrary
-
-import re
-from bs4 import BeautifulSoup
-from nltk.corpus import stopwords
-
-from tensorflow.keras.utils import to_categorical
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Embedding, LSTM, GRU
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras import optimizers
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
-from sklearn.metrics import accuracy_score
-
 def rnn_model(
-    rnn_layer, input_dim, embedding_matrix, max_token, units, hidden_activation, 
-    epochs, output_activation, optimizer, loss_func, check_point_name, use_es,
+    rnn_layer, input_dim, embedding_matrix, max_token, units, hidden_activation,
+    epochs, output_activation, optimizer, check_point_name, use_es,
     train_data, test_data, train_label, test_label, path_to_save_model):
 
     model = Sequential()
@@ -32,11 +16,11 @@ def rnn_model(
           output_dim=100,
           weights=[embedding_matrix],
           input_length=max_token,
-          trainable=False
+          mask_zero=True,
+          trainable=True
     ))
 
     if rnn_layer == 'GRU':
-
         for unit in units:
             model.add(GRU(units=unit, activation=hidden_activation, return_sequences=True))
             model.add(Dropout(0.1))
@@ -62,14 +46,16 @@ def rnn_model(
     else:
         raise ValueError('Invalid RNN layer type!!!')
 
-    model.compile(loss=loss_func, optimizer=optimizer, metrics=['accuracy'])
+    try:
+        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    except:
+        raise ValueError('Invalid optimizer!!!')
 
     print(model.summary())
 
     es = EarlyStopping(patience=5)
 
-    checkpoint_filepath = path_to_save_model + "BestModels/best_model_" + check_point_name + "checkpoint.h5"
-
+    checkpoint_filepath = path_to_save_model + "BestModels/" + check_point_name
     model_checkpoint_callback = ModelCheckpoint(
         filepath=checkpoint_filepath,
         monitor='val_accuracy',
